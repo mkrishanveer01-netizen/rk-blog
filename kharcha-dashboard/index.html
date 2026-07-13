@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mera Kharcha-Profit Manager</title>
+<style>
+  :root {
+    --surface-1:      #fcfcfb;
+    --page:           #f9f9f7;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --muted:          #898781;
+    --grid:           #e1e0d9;
+    --baseline:       #c3c2b7;
+    --border:         rgba(11,11,11,0.10);
+    --profit:         #0ca30c;
+    --expense:        #d03b3b;
+    --success-text:   #006300;
+    --bubble-bot:     #eef1ff;
+    --bubble-user:    #0ca30c;
+    --shadow:         0 1px 3px rgba(11,11,11,0.08), 0 8px 24px rgba(11,11,11,0.06);
+    --radius:         16px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --surface-1:      #1a1a19;
+      --page:           #0d0d0d;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --muted:          #898781;
+      --grid:           #2c2c2a;
+      --baseline:       #383835;
+      --border:         rgba(255,255,255,0.10);
+      --profit:         #0ca30c;
+      --expense:        #e66767;
+      --success-text:   #0ca30c;
+      --bubble-bot:     #232330;
+      --bubble-user:    #0ca30c;
+      --shadow:         0 1px 3px rgba(0,0,0,0.4), 0 8px 24px rgba(0,0,0,0.35);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--page);
+    color: var(--text-primary);
+    padding-bottom: 40px;
+  }
+  a { color: inherit; }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 16px; }
+
+  header.app-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px; max-width: 920px; margin: 0 auto; gap: 8px; flex-wrap: wrap;
+  }
+  header.app-header h1 { font-size: 20px; margin: 0; }
+  header.app-header .sub { color: var(--text-secondary); font-size: 13px; margin-top: 2px; }
+  .header-actions { display: flex; gap: 8px; }
+  .icon-btn {
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px;
+    padding: 10px 14px; font-size: 15px; cursor: pointer; color: var(--text-primary);
+    box-shadow: var(--shadow);
+  }
+  .icon-btn:hover { filter: brightness(0.97); }
+
+  .card {
+    background: var(--surface-1);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .card h2 { font-size: 15px; margin: 0 0 12px 0; color: var(--text-secondary); font-weight: 600; }
+
+  /* stat tiles */
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap: 12px; }
+  .stat-tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px; padding: 14px; box-shadow: var(--shadow); }
+  .stat-tile .label { font-size: 13px; color: var(--text-secondary); margin-bottom: 6px; }
+  .stat-tile .value { font-size: 26px; font-weight: 600; }
+  .stat-tile .delta { font-size: 12px; margin-top: 4px; }
+  .stat-tile .delta.up { color: var(--success-text); }
+  .stat-tile .delta.down { color: var(--expense); }
+  .dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:6px; }
+
+  /* chat */
+  .chat-box {
+    height: 320px; overflow-y: auto; padding: 12px; border-radius: 12px;
+    background: var(--page); border: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px;
+  }
+  .msg { max-width: 82%; padding: 10px 14px; border-radius: 16px; font-size: 14.5px; line-height: 1.4; }
+  .msg.bot { align-self: flex-start; background: var(--bubble-bot); color: var(--text-primary); border-bottom-left-radius: 4px; }
+  .msg.user { align-self: flex-end; background: var(--bubble-user); color: #ffffff; border-bottom-right-radius: 4px; }
+  .msg .time { display:block; font-size: 10.5px; opacity: 0.65; margin-top: 4px; }
+  .quick-replies { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+  .qr-btn { border: none; border-radius: 10px; padding: 8px 12px; font-size: 13.5px; cursor: pointer; font-weight: 600; }
+  .qr-btn.expense { background: var(--expense); color: #fff; }
+  .qr-btn.profit { background: var(--profit); color: #fff; }
+
+  .chat-input-row { display: flex; gap: 8px; margin-top: 10px; }
+  .chat-input-row input[type=text] {
+    flex: 1; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border);
+    background: var(--surface-1); color: var(--text-primary); font-size: 15px;
+  }
+  .chat-input-row button, .quick-actions button {
+    border: none; border-radius: 12px; padding: 12px 16px; font-weight: 600; cursor: pointer; font-size: 15px;
+  }
+  .send-btn { background: var(--text-primary); color: var(--surface-1); }
+  .mic-btn { background: var(--surface-1); border: 1px solid var(--border); color: var(--text-primary); }
+  .mic-btn.listening { background: var(--expense); color: #fff; }
+
+  .quick-actions { display: flex; gap: 10px; margin-top: 10px; }
+  .quick-actions .qa-expense { background: var(--expense); color: #fff; flex: 1; }
+  .quick-actions .qa-profit { background: var(--profit); color: #fff; flex: 1; }
+
+  .hint { font-size: 12.5px; color: var(--muted); margin-top: 8px; }
+
+  /* chart */
+  .legend-row { display: flex; gap: 16px; margin-bottom: 8px; font-size: 13px; color: var(--text-secondary); }
+  .legend-row .item { display: flex; align-items: center; }
+  .legend-swatch { width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; }
+  #chartWrap { position: relative; }
+  #chartSvg { width: 100%; height: 220px; display: block; overflow: visible; }
+  .bar { cursor: pointer; transition: filter 0.1s; }
+  .bar:hover, .bar:focus { filter: brightness(1.12); outline: none; }
+  .day-label { fill: var(--muted); font-size: 10px; }
+  .tick-label { fill: var(--muted); font-size: 10px; }
+  .gridline { stroke: var(--grid); stroke-width: 1; }
+  .baseline-line { stroke: var(--baseline); stroke-width: 1; }
+  #tooltip {
+    position: absolute; pointer-events: none; background: var(--text-primary); color: var(--surface-1);
+    padding: 6px 10px; border-radius: 8px; font-size: 12.5px; opacity: 0; transform: translate(-50%,-110%);
+    white-space: nowrap; transition: opacity 0.08s; z-index: 5;
+  }
+
+  /* table */
+  table.entries { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  table.entries th { text-align: left; color: var(--muted); font-weight: 600; font-size: 12px; padding: 6px 8px; border-bottom: 1px solid var(--grid); }
+  table.entries td { padding: 8px; border-bottom: 1px solid var(--grid); vertical-align: middle; }
+  table.entries td.amt { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .badge { padding: 3px 9px; border-radius: 20px; font-size: 11.5px; font-weight: 600; color: #fff; }
+  .badge.expense { background: var(--expense); }
+  .badge.profit { background: var(--profit); }
+  .del-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 16px; }
+  .del-btn:hover { color: var(--expense); }
+  .empty-note { color: var(--muted); font-size: 13.5px; padding: 12px 0; text-align: center; }
+
+  /* report / footer buttons */
+  .row-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .row-actions select, .row-actions button {
+    padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-1);
+    color: var(--text-primary); font-size: 13.5px; cursor: pointer;
+  }
+  .row-actions .primary { background: var(--text-primary); color: var(--surface-1); border: none; font-weight: 600; }
+  .row-actions .danger { color: var(--expense); }
+
+  #banner {
+    display: none; background: #fff7e6; border: 1px solid #eda100; color: #6b4a00;
+    padding: 12px 16px; border-radius: 12px; margin-bottom: 16px; font-size: 14px; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    #banner { background: #332a10; border-color: #c98500; color: #f0c96b; }
+  }
+  #banner button { border: none; background: var(--text-primary); color: var(--surface-1); border-radius: 8px; padding: 8px 12px; cursor: pointer; font-weight: 600; }
+
+  /* modal */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: none; align-items: center; justify-content: center; padding: 16px; z-index: 20; }
+  .modal { background: var(--surface-1); border-radius: 16px; padding: 20px; max-width: 480px; width: 100%; max-height: 80vh; overflow-y: auto; box-shadow: var(--shadow); }
+  .modal h3 { margin-top: 0; }
+  .modal .close-x { float: right; background: none; border: none; font-size: 20px; cursor: pointer; color: var(--muted); }
+
+  footer.help { font-size: 13px; color: var(--text-secondary); text-align: center; margin-top: 24px; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div>
+    <h1>💰 Mera Kharcha-Profit Manager</h1>
+    <div class="sub" id="todayDateLabel"></div>
+  </div>
+  <div class="header-actions">
+    <button class="icon-btn" id="helpBtn" title="Madad">❓ Help</button>
+    <button class="icon-btn" id="notifBtn" title="Reminder On/Off">🔔 Reminder</button>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div id="banner">
+    <span>⏰ Aaj ka kharcha ya profit abhi tak add nahi kiya! Neeche chat mein likh do.</span>
+    <button id="bannerOkBtn">Theek Hai</button>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-grid" id="statsGrid"></div>
+
+  <!-- CHAT -->
+  <div class="card" style="margin-top:16px;">
+    <h2>💬 Yahan Type Karo — Kharcha ya Profit</h2>
+    <div class="chat-box" id="chatBox"></div>
+    <div class="quick-actions">
+      <button class="qa-expense" id="qaExpense">➖ Kharcha Add Karo</button>
+      <button class="qa-profit" id="qaProfit">➕ Profit Add Karo</button>
+    </div>
+    <div class="chat-input-row">
+      <input type="text" id="chatInput" placeholder="Jaise: 500 kharcha chai ke liye" autocomplete="off">
+      <button class="mic-btn" id="micBtn" title="Bol kar likho" style="display:none;">🎤</button>
+      <button class="send-btn" id="sendBtn">Bhejo</button>
+    </div>
+    <div class="hint">Example: <b>"500 kharcha"</b>, <b>"1000 profit aaj"</b>, ya sirf number likh kar button se batao.</div>
+  </div>
+
+  <!-- CHART -->
+  <div class="card">
+    <h2>📊 Pichle 14 Din — Kharcha vs Profit (click karo detail ke liye)</h2>
+    <div class="legend-row">
+      <span class="item"><span class="legend-swatch" style="background:var(--profit)"></span>Profit</span>
+      <span class="item"><span class="legend-swatch" style="background:var(--expense)"></span>Kharcha</span>
+    </div>
+    <div id="chartWrap">
+      <svg id="chartSvg" viewBox="0 0 880 220" preserveAspectRatio="none"></svg>
+      <div id="tooltip"></div>
+    </div>
+  </div>
+
+  <!-- RECENT ENTRIES -->
+  <div class="card">
+    <h2>🧾 Recent Entries</h2>
+    <div id="entriesTableWrap"></div>
+  </div>
+
+  <!-- REPORT / EXPORT -->
+  <div class="card">
+    <h2>📥 Report Download Karo</h2>
+    <div class="row-actions">
+      <select id="reportRange">
+        <option value="today">Aaj</option>
+        <option value="week">Pichle 7 Din</option>
+        <option value="month">Is Mahine</option>
+        <option value="all">Sab Data</option>
+      </select>
+      <button class="primary" id="downloadBtn">CSV Download</button>
+      <button class="danger" id="resetBtn">🗑️ Sara Data Delete Karo</button>
+    </div>
+  </div>
+
+  <footer class="help">
+    Data sirf is browser mein save hota hai (koi server nahi). Backup ke liye CSV download karte raho.<br>
+    Made for easy daily kharcha-profit tracking — bina kisi technical knowledge ke.
+  </footer>
+
+</div>
+
+<!-- HELP MODAL -->
+<div class="modal-overlay" id="helpModal">
+  <div class="modal">
+    <button class="close-x" data-close="helpModal">✕</button>
+    <h3>❓ Kaise Use Karein</h3>
+    <p><b>1. Chat mein type karo</b> — jaise "500 kharcha chai" ya "1000 profit aaj". App khud samajh jayega ye kharcha hai ya profit.</p>
+    <p><b>2. Agar sirf number likho</b> (jaise "500") to app poochega Kharcha ya Profit — button dabao, ho gaya.</p>
+    <p><b>3. Quick buttons</b> se bhi bina type kiye seedha amount daal sakte ho.</p>
+    <p><b>4. Chart</b> par kisi bhi din ke bar par click karo — us din ki poori detail dikhegi.</p>
+    <p><b>5. Reminder</b> on karo taaki agar aaj entry na daali ho to yaad dilaya jaaye (sirf tab jab yeh page khula ho).</p>
+    <p><b>6. Report Download</b> se apna data CSV file mein save kar sakte ho — Excel mein khul jaati hai.</p>
+    <p>Koi bhi galat entry ho jaaye to Recent Entries list mein 🗑️ button se delete kar do.</p>
+  </div>
+</div>
+
+<!-- DAY DETAIL MODAL -->
+<div class="modal-overlay" id="dayModal">
+  <div class="modal">
+    <button class="close-x" data-close="dayModal">✕</button>
+    <h3 id="dayModalTitle"></h3>
+    <div id="dayModalBody"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var STORAGE_KEY = "kpr_entries_v1";
+  var REMINDER_KEY = "kpr_reminder_on";
+
+  /* ---------- data layer ---------- */
+  function loadEntries(){
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch(e){ return []; }
+  }
+  function saveEntries(list){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  }
+  var entries = loadEntries();
+
+  function addEntry(type, amount, note){
+    var e = {
+      id: Date.now() + "-" + Math.random().toString(36).slice(2,7),
+      type: type,
+      amount: Math.round(amount * 100) / 100,
+      note: (note || "").trim(),
+      ts: new Date().toISOString()
+    };
+    entries.push(e);
+    saveEntries(entries);
+    renderAll();
+    return e;
+  }
+  function deleteEntry(id){
+    entries = entries.filter(function(e){ return e.id !== id; });
+    saveEntries(entries);
+    renderAll();
+  }
+
+  /* ---------- date helpers (local time, no UTC shift) ---------- */
+  function dateKey(d){
+    var y = d.getFullYear(), m = ("0"+(d.getMonth()+1)).slice(-2), day = ("0"+d.getDate()).slice(-2);
+    return y+"-"+m+"-"+day;
+  }
+  function todayKey(){ return dateKey(new Date()); }
+  function isSameMonth(d, ref){ return d.getFullYear()===ref.getFullYear() && d.getMonth()===ref.getMonth(); }
+  function fmtDayLabel(key){
+    var parts = key.split("-");
+    var d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+    return d.toLocaleDateString('hi-IN', { day:'2-digit', month:'short' });
+  }
+  function fmtMoney(n){
+    var sign = n < 0 ? "-" : "";
+    return sign + "₹" + Math.abs(Math.round(n)).toLocaleString('en-IN');
+  }
+  function fmtTime(iso){
+    return new Date(iso).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
+  }
+
+  /* ---------- deterministic message parser (no AI, no hallucination) ---------- */
+  var EXPENSE_WORDS = ["kharcha","kharch","kharche","kharcho","spend","spent","expense","खर्च","खर्चा"];
+  var PROFIT_WORDS = ["profit","kamai","kamaya","kamaye","kamaayi","income","munafa","मुनाफा","कमाई","profit"];
+
+  function parseMessage(text){
+    var lower = text.toLowerCase();
+    var hasExpense = EXPENSE_WORDS.some(function(w){ return lower.indexOf(w) !== -1; });
+    var hasProfit = PROFIT_WORDS.some(function(w){ return lower.indexOf(w) !== -1; });
+
+    var numMatch = text.match(/[0-9][0-9,]*(\.[0-9]+)?/);
+    var amount = numMatch ? parseFloat(numMatch[0].replace(/,/g,"")) : null;
+
+    var note = text;
+    if (numMatch) note = note.replace(numMatch[0], " ");
+    EXPENSE_WORDS.concat(PROFIT_WORDS).forEach(function(w){
+      note = note.replace(new RegExp(w, "ig"), " ");
+    });
+    note = note.replace(/\s+/g," ").trim().replace(/^[-:,.]+|[-:,.]+$/g,"").trim();
+
+    if (!amount || amount <= 0) {
+      return { status:"no_amount" };
+    }
+    if (hasExpense && !hasProfit) return { status:"ok", type:"expense", amount:amount, note:note };
+    if (hasProfit && !hasExpense) return { status:"ok", type:"profit", amount:amount, note:note };
+    return { status:"ambiguous", amount:amount, note:note };
+  }
+
+  /* ---------- chat UI ---------- */
+  var chatBox = document.getElementById("chatBox");
+  var pendingAmbiguous = null;
+
+  function appendMsg(who, html, extraNode){
+    var div = document.createElement("div");
+    div.className = "msg " + who;
+    var textSpan = document.createElement("span");
+    textSpan.textContent = html;
+    div.appendChild(textSpan);
+    var time = document.createElement("span");
+    time.className = "time";
+    time.textContent = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+    div.appendChild(time);
+    if (extraNode) div.appendChild(extraNode);
+    chatBox.appendChild(div);
+    chatBox.scrollTop = chatBox.scrollHeight;
+    return div;
+  }
+
+  function botConfirm(entry){
+    var icon = entry.type === "expense" ? "🔴" : "🟢";
+    var label = entry.type === "expense" ? "Kharcha" : "Profit";
+    var noteTxt = entry.note ? (" — " + entry.note) : "";
+    appendMsg("bot", icon + " " + fmtMoney(entry.amount) + " " + label + " add ho gaya" + noteTxt + " ✅");
+  }
+
+  function handleUserText(text){
+    text = text.trim();
+    if (!text) return;
+    appendMsg("user", text);
+
+    var result = parseMessage(text);
+    if (result.status === "no_amount") {
+      appendMsg("bot", "Mujhe amount (number) samajh nahi aaya 🤔 Kripya jaise likho: \"500 kharcha\" ya \"1000 profit\".");
+      return;
+    }
+    if (result.status === "ok") {
+      var entry = addEntry(result.type, result.amount, result.note);
+      botConfirm(entry);
+      return;
+    }
+    if (result.status === "ambiguous") {
+      pendingAmbiguous = { amount: result.amount, note: result.note };
+      var wrap = document.createElement("div");
+      wrap.className = "quick-replies";
+      var bE = document.createElement("button");
+      bE.className = "qr-btn expense"; bE.textContent = "🔴 Kharcha";
+      bE.onclick = function(){ resolveAmbiguous("expense"); };
+      var bP = document.createElement("button");
+      bP.className = "qr-btn profit"; bP.textContent = "🟢 Profit";
+      bP.onclick = function(){ resolveAmbiguous("profit"); };
+      wrap.appendChild(bE); wrap.appendChild(bP);
+      appendMsg("bot", fmtMoney(result.amount) + " ka amount mila — yeh Kharcha hai ya Profit?", wrap);
+    }
+  }
+
+  function resolveAmbiguous(type){
+    if (!pendingAmbiguous) return;
+    var entry = addEntry(type, pendingAmbiguous.amount, pendingAmbiguous.note);
+    botConfirm(entry);
+    pendingAmbiguous = null;
+  }
+
+  document.getElementById("sendBtn").onclick = function(){
+    var input = document.getElementById("chatInput");
+    handleUserText(input.value);
+    input.value = "";
+    input.focus();
+  };
+  document.getElementById("chatInput").addEventListener("keydown", function(e){
+    if (e.key === "Enter") document.getElementById("sendBtn").click();
+  });
+
+  document.getElementById("qaExpense").onclick = function(){
+    var amt = prompt("Kitna Kharcha hua? (sirf number likho)");
+    if (amt === null) return;
+    var n = parseFloat(String(amt).replace(/,/g,""));
+    if (!n || n <= 0) { alert("Sahi number nahi mila. Dobara try karo."); return; }
+    var note = prompt("Kis cheez ka? (optional, khaali chhod sakte ho)") || "";
+    var entry = addEntry("expense", n, note);
+    botConfirm(entry);
+  };
+  document.getElementById("qaProfit").onclick = function(){
+    var amt = prompt("Kitna Profit hua? (sirf number likho)");
+    if (amt === null) return;
+    var n = parseFloat(String(amt).replace(/,/g,""));
+    if (!n || n <= 0) { alert("Sahi number nahi mila. Dobara try karo."); return; }
+    var note = prompt("Kis se hua? (optional, khaali chhod sakte ho)") || "";
+    var entry = addEntry("profit", n, note);
+    botConfirm(entry);
+  };
+
+  /* ---------- optional voice input (speech-to-text only, no AI guessing) ---------- */
+  var SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (SpeechRec) {
+    var micBtn = document.getElementById("micBtn");
+    micBtn.style.display = "inline-block";
+    var recog = new SpeechRec();
+    recog.lang = "hi-IN";
+    recog.interimResults = false;
+    var listening = false;
+    micBtn.onclick = function(){
+      if (listening) { recog.stop(); return; }
+      try { recog.start(); listening = true; micBtn.classList.add("listening"); }
+      catch(e){}
+    };
+    recog.onresult = function(ev){
+      var text = ev.results[0][0].transcript;
+      document.getElementById("chatInput").value = text;
+    };
+    recog.onend = function(){ listening = false; micBtn.classList.remove("listening"); };
+    recog.onerror = function(){ listening = false; micBtn.classList.remove("listening"); };
+  }
+
+  /* ---------- stats ---------- */
+  function computeDayTotals(key){
+    var exp = 0, prof = 0;
+    entries.forEach(function(e){
+      if (dateKey(new Date(e.ts)) === key) {
+        if (e.type === "expense") exp += e.amount; else prof += e.amount;
+      }
+    });
+    return { expense: exp, profit: prof, net: prof - exp };
+  }
+
+  function renderStats(){
+    var today = new Date();
+    var tKey = todayKey();
+    var tStats = computeDayTotals(tKey);
+
+    var yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
+    var yStats = computeDayTotals(dateKey(yesterday));
+
+    var monthExp = 0, monthProf = 0;
+    entries.forEach(function(e){
+      var d = new Date(e.ts);
+      if (isSameMonth(d, today)) {
+        if (e.type === "expense") monthExp += e.amount; else monthProf += e.amount;
+      }
+    });
+    var monthNet = monthProf - monthExp;
+
+    var tiles = [
+      { label: "Aaj ka Kharcha", value: tStats.expense, color: "var(--expense)" },
+      { label: "Aaj ka Profit", value: tStats.profit, color: "var(--profit)" },
+      { label: "Aaj ka Net", value: tStats.net, color: tStats.net >= 0 ? "var(--profit)" : "var(--expense)", delta: tStats.net - yStats.net },
+      { label: "Is Mahine ka Net", value: monthNet, color: monthNet >= 0 ? "var(--profit)" : "var(--expense)" }
+    ];
+
+    var grid = document.getElementById("statsGrid");
+    grid.innerHTML = "";
+    tiles.forEach(function(t){
+      var tile = document.createElement("div");
+      tile.className = "stat-tile";
+      var deltaHtml = "";
+      if (typeof t.delta === "number") {
+        var up = t.delta >= 0;
+        deltaHtml = '<div class="delta ' + (up?"up":"down") + '">' + (up?"▲":"▼") + " " + fmtMoney(Math.abs(t.delta)) + " kal se</div>";
+      }
+      tile.innerHTML =
+        '<div class="label">' + t.label + '</div>' +
+        '<div class="value" style="color:' + t.color + '">' + fmtMoney(t.value) + '</div>' +
+        deltaHtml;
+      grid.appendChild(tile);
+    });
+  }
+
+  /* ---------- entries table ---------- */
+  function renderTable(){
+    var wrap = document.getElementById("entriesTableWrap");
+    var sorted = entries.slice().sort(function(a,b){ return new Date(b.ts) - new Date(a.ts); }).slice(0, 25);
+    if (sorted.length === 0) {
+      wrap.innerHTML = '<div class="empty-note">Abhi tak koi entry nahi hai. Chat mein type karke shuru karo!</div>';
+      return;
+    }
+    var html = '<table class="entries"><thead><tr><th>Tarikh</th><th>Type</th><th>Rashi</th><th>Note</th><th></th></tr></thead><tbody>';
+    sorted.forEach(function(e){
+      var d = new Date(e.ts);
+      html += '<tr>' +
+        '<td>' + fmtDayLabel(dateKey(d)) + ', ' + fmtTime(e.ts) + '</td>' +
+        '<td><span class="badge ' + e.type + '">' + (e.type === "expense" ? "Kharcha" : "Profit") + '</span></td>' +
+        '<td class="amt" style="color:' + (e.type==="expense" ? "var(--expense)" : "var(--profit)") + '">' + fmtMoney(e.amount) + '</td>' +
+        '<td>' + escapeHtml(e.note || "-") + '</td>' +
+        '<td><button class="del-btn" data-id="' + e.id + '" title="Delete">🗑️</button></td>' +
+        '</tr>';
+    });
+    html += '</tbody></table>';
+    wrap.innerHTML = html;
+    wrap.querySelectorAll(".del-btn").forEach(function(btn){
+      btn.onclick = function(){
+        if (confirm("Yeh entry delete karni hai?")) deleteEntry(btn.getAttribute("data-id"));
+      };
+    });
+  }
+  function escapeHtml(s){
+    var d = document.createElement("div");
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  /* ---------- chart (plain SVG, no external library) ---------- */
+  var tooltip = document.getElementById("tooltip");
+  var chartWrap = document.getElementById("chartWrap");
+
+  function niceMax(v){
+    if (v <= 0) return 100;
+    var pow = Math.pow(10, Math.floor(Math.log10(v)));
+    var n = v / pow;
+    var step = n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10;
+    return step * pow;
+  }
+
+  function renderChart(){
+    var days = [];
+    var today = new Date();
+    for (var i = 13; i >= 0; i--) {
+      var d = new Date(today); d.setDate(today.getDate() - i);
+      days.push(dateKey(d));
+    }
+    var data = days.map(function(k){ return { key:k, totals: computeDayTotals(k) }; });
+    var maxVal = 0;
+    data.forEach(function(d){ maxVal = Math.max(maxVal, d.totals.expense, d.totals.profit); });
+    var top = niceMax(maxVal || 100);
+
+    var W = 880, H = 220;
+    var padLeft = 34, padBottom = 22, padTop = 10, padRight = 6;
+    var plotW = W - padLeft - padRight;
+    var plotH = H - padTop - padBottom;
+    var groupW = plotW / days.length;
+    var barW = Math.min(14, (groupW - 8) / 2);
+
+    var svg = document.getElementById("chartSvg");
+    var parts = [];
+
+    // gridlines (0/25/50/75/100%)
+    [0, 0.25, 0.5, 0.75, 1].forEach(function(f){
+      var y = padTop + plotH * (1 - f);
+      parts.push('<line class="gridline" x1="' + padLeft + '" x2="' + (W-padRight) + '" y1="' + y + '" y2="' + y + '"></line>');
+      parts.push('<text class="tick-label" x="0" y="' + (y+3) + '">' + Math.round(top*f).toLocaleString('en-IN') + '</text>');
+    });
+    // baseline
+    var baseY = padTop + plotH;
+    parts.push('<line class="baseline-line" x1="' + padLeft + '" x2="' + (W-padRight) + '" y1="' + baseY + '" y2="' + baseY + '"></line>');
+
+    data.forEach(function(d, idx){
+      var gx = padLeft + idx * groupW;
+      var expH = top > 0 ? (d.totals.expense / top) * plotH : 0;
+      var profH = top > 0 ? (d.totals.profit / top) * plotH : 0;
+      var profX = gx + groupW/2 - barW - 1;
+      var expX = gx + groupW/2 + 1;
+
+      parts.push(barRect(profX, baseY, barW, profH, "var(--profit)", d.key, "profit", d.totals.profit));
+      parts.push(barRect(expX, baseY, barW, expH, "var(--expense)", d.key, "expense", d.totals.expense));
+
+      if (idx % 2 === 0 || days.length <= 8) {
+        parts.push('<text class="day-label" x="' + (gx + groupW/2) + '" y="' + (H-4) + '" text-anchor="middle">' + fmtDayLabel(d.key) + '</text>');
+      }
+    });
+
+    svg.innerHTML = parts.join("");
+
+    svg.querySelectorAll(".bar").forEach(function(rect){
+      rect.addEventListener("mouseenter", function(ev){ showTooltip(ev, rect); });
+      rect.addEventListener("mousemove", function(ev){ showTooltip(ev, rect); });
+      rect.addEventListener("mouseleave", hideTooltip);
+      rect.addEventListener("focus", function(ev){ showTooltip(ev, rect); });
+      rect.addEventListener("blur", hideTooltip);
+      rect.addEventListener("click", function(){ openDayModal(rect.getAttribute("data-key")); });
+      rect.setAttribute("tabindex", "0");
+    });
+  }
+
+  function barRect(x, baseY, w, h, color, key, type, value){
+    var y = baseY - h;
+    var rx = h > 0 ? Math.min(4, h) : 0;
+    return '<rect class="bar" x="' + x + '" y="' + y + '" width="' + w + '" height="' + Math.max(h,0.5) +
+      '" rx="' + rx + '" fill="' + color + '" data-key="' + key + '" data-type="' + type + '" data-value="' + value + '"></rect>';
+  }
+
+  function showTooltip(ev, rect){
+    var type = rect.getAttribute("data-type");
+    var value = parseFloat(rect.getAttribute("data-value"));
+    var key = rect.getAttribute("data-key");
+    var label = type === "expense" ? "Kharcha" : "Profit";
+    tooltip.textContent = fmtDayLabel(key) + " — " + label + ": " + fmtMoney(value);
+    var wrapRect = chartWrap.getBoundingClientRect();
+    var scale = wrapRect.width / 880;
+    var rx = parseFloat(rect.getAttribute("x")) + parseFloat(rect.getAttribute("width"))/2;
+    var ry = parseFloat(rect.getAttribute("y"));
+    tooltip.style.left = (rx * scale) + "px";
+    tooltip.style.top = (ry * (wrapRect.height/220)) + "px";
+    tooltip.style.opacity = 1;
+  }
+  function hideTooltip(){ tooltip.style.opacity = 0; }
+
+  /* ---------- day detail modal ---------- */
+  function openDayModal(key){
+    var list = entries.filter(function(e){ return dateKey(new Date(e.ts)) === key; })
+      .sort(function(a,b){ return new Date(a.ts) - new Date(b.ts); });
+    var totals = computeDayTotals(key);
+    document.getElementById("dayModalTitle").textContent = fmtDayLabel(key) + " ki Details";
+    var body = document.getElementById("dayModalBody");
+    var html = '<p><b>Kharcha:</b> <span style="color:var(--expense)">' + fmtMoney(totals.expense) + '</span> &nbsp; ' +
+      '<b>Profit:</b> <span style="color:var(--profit)">' + fmtMoney(totals.profit) + '</span> &nbsp; ' +
+      '<b>Net:</b> <span style="color:' + (totals.net>=0?"var(--profit)":"var(--expense)") + '">' + fmtMoney(totals.net) + '</span></p>';
+    if (list.length === 0) {
+      html += '<div class="empty-note">Is din koi entry nahi hai.</div>';
+    } else {
+      html += '<table class="entries"><thead><tr><th>Samay</th><th>Type</th><th>Rashi</th><th>Note</th></tr></thead><tbody>';
+      list.forEach(function(e){
+        html += '<tr><td>' + fmtTime(e.ts) + '</td>' +
+          '<td><span class="badge ' + e.type + '">' + (e.type==="expense"?"Kharcha":"Profit") + '</span></td>' +
+          '<td class="amt">' + fmtMoney(e.amount) + '</td>' +
+          '<td>' + escapeHtml(e.note || "-") + '</td></tr>';
+      });
+      html += '</tbody></table>';
+    }
+    body.innerHTML = html;
+    document.getElementById("dayModal").style.display = "flex";
+  }
+
+  document.querySelectorAll("[data-close]").forEach(function(btn){
+    btn.onclick = function(){ document.getElementById(btn.getAttribute("data-close")).style.display = "none"; };
+  });
+  document.querySelectorAll(".modal-overlay").forEach(function(ov){
+    ov.addEventListener("click", function(ev){ if (ev.target === ov) ov.style.display = "none"; });
+  });
+  document.getElementById("helpBtn").onclick = function(){ document.getElementById("helpModal").style.display = "flex"; };
+
+  /* ---------- notifications / reminder ---------- */
+  var notifBtn = document.getElementById("notifBtn");
+  function reminderOn(){ return localStorage.getItem(REMINDER_KEY) === "1"; }
+  function updateNotifBtn(){
+    notifBtn.textContent = reminderOn() ? "🔔 Reminder: ON" : "🔕 Reminder: OFF";
+  }
+  notifBtn.onclick = function(){
+    if (!reminderOn()) {
+      if ("Notification" in window) {
+        Notification.requestPermission().then(function(perm){
+          if (perm === "granted") {
+            localStorage.setItem(REMINDER_KEY, "1");
+            updateNotifBtn();
+            new Notification("Reminder On ho gaya ✅", { body: "Ab agar aaj entry nahi daali to yaad dilaya jaayega (jab tak yeh page khula rahega)." });
+          } else {
+            alert("Notification permission nahi mili. Browser settings mein allow karo.");
+          }
+        });
+      } else {
+        localStorage.setItem(REMINDER_KEY, "1");
+        updateNotifBtn();
+      }
+    } else {
+      localStorage.setItem(REMINDER_KEY, "0");
+      updateNotifBtn();
+    }
+  };
+  updateNotifBtn();
+
+  function checkReminder(){
+    var hasToday = entries.some(function(e){ return dateKey(new Date(e.ts)) === todayKey(); });
+    var hour = new Date().getHours();
+    if (!hasToday && hour >= 18) {
+      document.getElementById("banner").style.display = "flex";
+      if (reminderOn() && "Notification" in window && Notification.permission === "granted") {
+        new Notification("Aaj ka kharcha/profit add karna baaki hai ⏰", { body: "App kholo aur chat mein likh do." });
+      }
+    } else {
+      document.getElementById("banner").style.display = "none";
+    }
+  }
+  document.getElementById("bannerOkBtn").onclick = function(){
+    document.getElementById("banner").style.display = "none";
+  };
+  checkReminder();
+  setInterval(checkReminder, 5 * 60 * 1000);
+
+  /* ---------- CSV export ---------- */
+  document.getElementById("downloadBtn").onclick = function(){
+    var range = document.getElementById("reportRange").value;
+    var now = new Date();
+    var filtered = entries.filter(function(e){
+      var d = new Date(e.ts);
+      if (range === "today") return dateKey(d) === todayKey();
+      if (range === "week") { var wk = new Date(now); wk.setDate(now.getDate()-6); return d >= new Date(wk.getFullYear(),wk.getMonth(),wk.getDate()); }
+      if (range === "month") return isSameMonth(d, now);
+      return true;
+    }).sort(function(a,b){ return new Date(a.ts) - new Date(b.ts); });
+
+    var rows = [["Tarikh","Samay","Type","Rashi","Note"]];
+    filtered.forEach(function(e){
+      var d = new Date(e.ts);
+      rows.push([dateKey(d), fmtTime(e.ts), e.type === "expense" ? "Kharcha" : "Profit", e.amount, e.note || ""]);
+    });
+    var totalExp = filtered.filter(function(e){return e.type==="expense";}).reduce(function(s,e){return s+e.amount;},0);
+    var totalProf = filtered.filter(function(e){return e.type==="profit";}).reduce(function(s,e){return s+e.amount;},0);
+    rows.push([]);
+    rows.push(["", "", "Total Kharcha", totalExp, ""]);
+    rows.push(["", "", "Total Profit", totalProf, ""]);
+    rows.push(["", "", "Net", totalProf - totalExp, ""]);
+
+    var csv = rows.map(function(r){
+      return r.map(function(cell){
+        var s = String(cell === undefined ? "" : cell);
+        if (s.indexOf(",") !== -1 || s.indexOf('"') !== -1) s = '"' + s.replace(/"/g,'""') + '"';
+        return s;
+      }).join(",");
+    }).join("\n");
+
+    var blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "kharcha-profit-report-" + range + "-" + todayKey() + ".csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  document.getElementById("resetBtn").onclick = function(){
+    if (confirm("Pakka? Sara data hamesha ke liye delete ho jaayega. Pehle CSV download kar lo agar zaroorat ho.")) {
+      entries = [];
+      saveEntries(entries);
+      renderAll();
+    }
+  };
+
+  /* ---------- init ---------- */
+  document.getElementById("todayDateLabel").textContent =
+    new Date().toLocaleDateString('hi-IN', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+
+  function renderAll(){
+    renderStats();
+    renderTable();
+    renderChart();
+    checkReminder();
+  }
+
+  renderAll();
+  if (entries.length === 0) {
+    appendMsg("bot", "Namaste! 🙏 Main aapka Kharcha-Profit Manager hoon. Neeche type karo jaise \"500 kharcha\" ya \"1000 profit\" — main apne aap add kar dunga. ❓ Help button dabao agar madad chahiye.");
+  }
+})();
+</script>
+</body>
+</html>
